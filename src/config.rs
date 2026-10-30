@@ -49,8 +49,7 @@ struct RawProvider {
     #[serde(default = "default_header_value")]
     header_value: String,
 
-    /// Defaults to the provider name, mirroring argonath's "account named after
-    /// the thing it belongs to" shape.
+    /// Defaults to the provider name.
     keychain_account: Option<String>,
 
     #[serde(default)]

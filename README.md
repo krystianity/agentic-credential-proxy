@@ -11,6 +11,12 @@ Bodies are never parsed, so any API works; a new provider is a few lines of TOML
 An optional [one-way file drop](#the-file-drop) lets the agent take files off
 this Mac, and a [menu bar app](#the-menu-bar) shows counters and can pause it all.
 
+> **Tip:** open this repo in [Claude Code](https://claude.com/claude-code) and ask
+> it to set the proxy up for you. It can walk you through the config, keychain
+> items and Tailscale ACL. Paste API keys into the `security` command yourself,
+> though, not into the chat, and [verify the setup](#verifying-the-setup-paranoid)
+> afterwards.
+
 ```
 agent                        this Mac                          upstream API
   python acp.py ──loopback──▶ proxy :8788                           │
@@ -184,6 +190,21 @@ needs its own directory and `--config` pointing into it. Run `--check` from a
 terminal first so the keychain prompts appear where you can click "Always
 Allow". A rebuilt binary prompts again, and its first keychain read takes a few
 seconds.
+
+### Verifying the setup (paranoid)
+
+If an agent helped with the setup, build from a clone it never touched:
+
+```sh
+git clone https://github.com/krystianity/agentic-credential-proxy ~/acp-clean
+~/acp-clean/start.sh --check
+```
+
+Before approving the keychain prompt, check that the `embedding ...` lines name
+only the configs you expect, and read every `base_url` in them: the config
+decides where each key goes, and no git check covers it. This does not stop
+something already running as your user, which can tamper with `~/.cargo`,
+`~/.gitconfig` or the toolchain on your `PATH`.
 
 ### Adding a provider
 

@@ -14,8 +14,7 @@
 bind = "100.101.102.103:8788"
 
 # One keychain service for the whole proxy, one generic-password item per
-# credential, each named after the provider it belongs to. Same shape argonath
-# and work-mcp use.
+# credential, each named after the provider it belongs to.
 # keychain_service = "agentic-credential-proxy"
 
 # Inactivity timeout per read, not a total deadline, so long renders and SSE
