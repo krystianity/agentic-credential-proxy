@@ -1,0 +1,95 @@
+# Copy to ~/.config/agentic-credential-proxy/config.toml and edit. The config is
+# built into the binary, so every change needs `./start.sh --rebuild`.
+#
+# The bind must be a tailnet (100.64.0.0/10) or loopback address; a LAN or
+# wildcard address is refused at startup. Use `tailscale ip -4` for yours.
+#
+# There is no inbound auth: reaching this port IS the authorisation, and a
+# Tailscale ACL is what decides who can. See the README.
+#
+# Callers must also send `X-ACP-Provider: <name>` matching the provider in the
+# path. Not configurable, and not a security control -- it just stops a
+# hallucinated route from reaching an upstream, since the wrong name would have
+# to be guessed twice.
+bind = "100.101.102.103:8788"
+
+# One keychain service for the whole proxy, one generic-password item per
+# credential, each named after the provider it belongs to. Same shape argonath
+# and work-mcp use.
+# keychain_service = "agentic-credential-proxy"
+
+# Inactivity timeout per read, not a total deadline, so long renders and SSE
+# streams are not cut off mid-flight.
+# upstream_timeout_s = 300
+
+# max_request_body_bytes = 268435456  # 256 MiB
+
+# --- one-way file drop (optional) --------------------------------------------
+# Put files in this directory and the agent can list them at GET /files and
+# fetch one at GET /files/<name>; fetching deletes it. There is no upload, and
+# no write of any kind -- traffic only ever goes outward.
+#
+# Only plain files sitting directly in the directory are reachable.
+# Subdirectories, symlinks and dotfiles are never listed and never served, and a
+# name is one path segment, so nothing can address anything outside it.
+#
+# Delete the block or set enabled = false to switch it off. The directory must
+# exist and be an absolute path (a leading ~/ is expanded).
+# [files]
+# dir = "~/acp-drop"
+# enabled = true
+
+# --- providers ---------------------------------------------------------------
+# Each becomes a path prefix: POST /<name>/<upstream path> is forwarded to
+# <base_url>/<upstream path> with `header` set to `header_value`, where
+# {credential} is replaced by the keychain item named `keychain_account`
+# (defaults to the provider name).
+#
+# base_url must be https -- injecting a credential into a plaintext request puts
+# it on the wire -- and must not be this machine (localhost, loopback, 0.0.0.0),
+# where any local process could take the port and be handed the key. No query
+# or fragment.
+#
+# TRACE and CONNECT are refused for every provider and cannot be allowed back in:
+# an upstream that honours TRACE echoes the request, injected credential and all.
+# Redirects are never followed either; a 3xx is handed back to the agent.
+
+# Verify base_url against the provider's own docs before relying on it.
+
+# An API that wants the key bare, in its own header.
+[[providers]]
+name = "elevenlabs"
+base_url = "https://api.elevenlabs.io"
+header = "xi-api-key"
+header_value = "{credential}"
+# Optional, non-secret, surfaced on the discovery endpoint for agents.
+description = "text to speech and voice cloning"
+docs = "https://elevenlabs.io/docs"
+# Upstream paths the agent may not reach. Matched case-insensitively after the
+# URL is normalised and percent decoded, so `v1/./user` and `v1/%2e/user` are
+# judged as `v1/user`; `*` spans any run of characters, `/` included.
+deny_paths = ["v1/user*", "v1/history*", "v1/workspace*", "*api-key*"]
+
+# The other direction, and stricter: if `allow_paths` is present, nothing off it
+# is forwarded. Same matching rules. Omit for "everything the denylist did not
+# rule out". Both are checked, deny first.
+# allow_paths = ["v1/text-to-speech*", "v1/voices*"]
+
+# Methods this provider accepts. Omit for "any method except the globally
+# refused TRACE and CONNECT".
+# allow_methods = ["GET", "POST"]
+
+# A provider whose keychain item is named something other than the route.
+[[providers]]
+name = "openai"
+base_url = "https://api.openai.com"
+header = "Authorization"
+keychain_account = "openai-personal"
+
+# Static non-secret headers an upstream requires can ride along.
+[[providers]]
+name = "anthropic"
+base_url = "https://api.anthropic.com"
+header = "x-api-key"
+header_value = "{credential}"
+extra_headers = { "anthropic-version" = "2023-06-01" }

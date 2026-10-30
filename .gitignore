@@ -1,0 +1,7 @@
+/target
+config.toml
+*.log
+agentic_credential_proxy_bin
+relative_proxy_*.sh
+__pycache__/
+acp_menubar_bin
